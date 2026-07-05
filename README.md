@@ -49,9 +49,7 @@ GitHub itu tempat naruh kode online. Semua tugas & capstone kalian
 bakal disimpan di sini. Ini sekalian jadi PORTFOLIO + amunisi CV.
 
 1. Buka https://github.com/signup
-2. Isi email, bikin password, pilih username.
-   TIPS username: pakai nama yang niat & profesional.
-   Ini bakal nempel di CV kalian. Contoh: `faisal-dev`, bukan `xX_gamerz_Xx`.
+2. Isi email, bikin password, pilih username (bebas, apa aja).
 3. Verifikasi (klik teka-teki + cek email konfirmasi).
 4. Selesai. Simpan username + password baik-baik.
 
