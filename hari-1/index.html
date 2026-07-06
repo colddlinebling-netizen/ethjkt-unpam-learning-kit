@@ -28,6 +28,7 @@
       <div class="tabs">
         <button class="tab active" data-tab="gacha">Gacha</button>
         <button class="tab" data-tab="koleksi">Koleksi</button>
+        <button class="tab" data-tab="badge">Badge</button>
       </div>
 
       <!-- ============ TAB: GACHA ============ -->
@@ -81,8 +82,18 @@
         <div class="collection-empty" id="collectionEmpty">Belum ada Pokémon. Tarik dulu di tab Gacha! 🎣</div>
         <div class="collection-grid" id="collectionGrid"></div>
       </div>
+
+      <!-- ============ TAB: BADGE ============ -->
+      <div class="tab-panel" id="panel-badge" hidden>
+        <p class="badge-intro">Kumpulkan Pokémon tiap tipe untuk menguasai gym Kanto dan meraih 8 badge-nya!</p>
+        <div class="champion" id="champion" hidden>👑 CHAMPION! Kamu menguasai semua 8 gym Kanto!</div>
+        <div class="badge-grid" id="badgeGrid"></div>
+      </div>
     </div>
   </div>
+
+  <!-- Notifikasi kecil saat dapat badge baru -->
+  <div class="toast" id="toast" hidden></div>
 
   <script src="app.js"></script>
 </body>

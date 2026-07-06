@@ -196,6 +196,9 @@ const el = {
   shinyCount: document.getElementById("shinyCount"),
   collectionGrid: document.getElementById("collectionGrid"),
   collectionEmpty: document.getElementById("collectionEmpty"),
+  badgeGrid: document.getElementById("badgeGrid"),
+  champion: document.getElementById("champion"),
+  toast: document.getElementById("toast"),
 };
 
 // ---------- Mesin rarity ----------
@@ -327,6 +330,7 @@ async function pull() {
     updateStats();
     render(result);
     addHistory(result);
+    checkNewBadges();      // rayakan kalau ada badge baru
     saveState();           // simpan progres ke localStorage
     return result;
   } catch (e) {
@@ -387,6 +391,86 @@ function renderCollection() {
   });
 }
 
+// ---------- Badge gym Kanto ----------
+// Tiap badge "dikuasai" dengan mengumpulkan BADGE_GOAL jenis Pokémon dari tipe tertentu.
+const BADGE_GOAL = 3;
+const BADGES = [
+  { id: "boulder", name: "Boulder", gym: "Pewter",    type: "rock",     icon: "🪨", color: "#B6A136" },
+  { id: "cascade", name: "Cascade", gym: "Cerulean",  type: "water",    icon: "💧", color: "#6390F0" },
+  { id: "thunder", name: "Thunder", gym: "Vermilion", type: "electric", icon: "⚡", color: "#E8B900" },
+  { id: "rainbow", name: "Rainbow", gym: "Celadon",   type: "grass",    icon: "🌿", color: "#7AC74C" },
+  { id: "soul",    name: "Soul",    gym: "Fuchsia",   type: "poison",   icon: "☠️", color: "#A33EA1" },
+  { id: "marsh",   name: "Marsh",   gym: "Saffron",   type: "psychic",  icon: "🔮", color: "#F95587" },
+  { id: "volcano", name: "Volcano", gym: "Cinnabar",  type: "fire",     icon: "🔥", color: "#EE8130" },
+  { id: "earth",   name: "Earth",   gym: "Viridian",  type: "ground",   icon: "⛰️", color: "#C79A45" },
+];
+
+// Berapa jenis unik dari sebuah tipe yang sudah dikoleksi.
+function countType(type) {
+  return Object.values(collection).filter(m => m.types.includes(type)).length;
+}
+
+// Kumpulan id badge yang sudah diraih saat ini.
+function earnedBadgeIds() {
+  return new Set(BADGES.filter(b => countType(b.type) >= BADGE_GOAL).map(b => b.id));
+}
+
+// Ubah warna hex jadi rgba (untuk efek glow badge).
+function hexToRgba(hex, alpha) {
+  const n = parseInt(hex.slice(1), 16);
+  return "rgba(" + ((n >> 16) & 255) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + alpha + ")";
+}
+
+function renderBadges() {
+  const earned = earnedBadgeIds();
+  el.champion.hidden = earned.size < BADGES.length;
+
+  el.badgeGrid.innerHTML = "";
+  BADGES.forEach(b => {
+    const punya = Math.min(countType(b.type), BADGE_GOAL);
+    const isEarned = earned.has(b.id);
+    const persen = (punya / BADGE_GOAL) * 100;
+
+    const cell = document.createElement("div");
+    cell.className = "badge-cell" + (isEarned ? " earned" : "");
+    cell.style.setProperty("--gym", b.color);
+    cell.style.setProperty("--gym-glow", hexToRgba(b.color, 0.45));
+    cell.style.setProperty("--gym-soft", hexToRgba(b.color, 0.12));
+    cell.innerHTML =
+      (isEarned ? '<span class="badge-check">✔</span>' : "") +
+      '<div class="badge-icon">' + b.icon + "</div>" +
+      '<div class="badge-name">' + b.name + " Badge</div>" +
+      '<div class="badge-gym">' + b.gym + " · " + b.type + "</div>" +
+      '<div class="badge-prog-track"><div class="badge-prog-fill" style="width:' + persen + '%"></div></div>' +
+      '<div class="badge-prog-txt">' + punya + " / " + BADGE_GOAL + "</div>";
+    el.badgeGrid.appendChild(cell);
+  });
+}
+
+// Badge yang sudah diraih & sudah ditampilkan (biar toast tidak muncul ulang).
+let shownBadges = new Set();
+
+// Munculkan notifikasi kecil selama beberapa detik.
+let toastTimer = null;
+function showToast(msg) {
+  el.toast.textContent = msg;
+  el.toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.toast.hidden = true; }, 3500);
+}
+
+// Cek apakah ada badge baru setelah sebuah tarikan; kalau ada, rayakan.
+function checkNewBadges() {
+  const earned = earnedBadgeIds();
+  earned.forEach(id => {
+    if (!shownBadges.has(id)) {
+      const b = BADGES.find(x => x.id === id);
+      showToast(b.icon + " Badge " + b.name + " diraih!");
+    }
+  });
+  shownBadges = earned;
+}
+
 // ---------- Navigasi tab ----------
 function switchTab(name) {
   document.querySelectorAll(".tab").forEach(t => {
@@ -396,6 +480,7 @@ function switchTab(name) {
     p.hidden = p.id !== "panel-" + name;
   });
   if (name === "koleksi") renderCollection(); // selalu tampilkan data terbaru
+  if (name === "badge") renderBadges();
 }
 
 document.querySelectorAll(".tab").forEach(t => {
@@ -405,3 +490,4 @@ document.querySelectorAll(".tab").forEach(t => {
 // ---------- Mulai: pulihkan progres yang tersimpan ----------
 loadState();
 updateStats();
+shownBadges = earnedBadgeIds(); // badge yang sudah diraih dari sesi lama, jangan toast ulang
