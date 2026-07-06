@@ -217,6 +217,22 @@
   const EPIC_IDS = [3,6,9,149,248,257,282,373,376,445,448,462,530,635,700,706,784,887,998];
   const SPECIAL_IDS = new Set([...SSR_IDS, ...EPIC_IDS]);
 
+  // Warna resmi tiap tipe Pokémon (untuk badge tipe).
+  const TYPE_COLORS = {
+    normal: "#A8A77A", fire: "#EE8130", water: "#6390F0", electric: "#F7D02C",
+    grass: "#7AC74C", ice: "#96D9D6", fighting: "#C22E28", poison: "#A33EA1",
+    ground: "#E2BF65", flying: "#A98FF3", psychic: "#F95587", bug: "#A6B91A",
+    rock: "#B6A136", ghost: "#735797", dragon: "#6F35FC", dark: "#705746",
+    steel: "#B7B7CE", fairy: "#D685AD",
+  };
+
+  // Label pendek + urutan tampil untuk 6 stat dasar.
+  const STAT_LABELS = {
+    "hp": "HP", "attack": "ATK", "defense": "DEF",
+    "special-attack": "SpA", "special-defense": "SpD", "speed": "SPD",
+  };
+  const STAT_MAX = 255; // stat dasar tertinggi yang mungkin (untuk skala bar)
+
   // Cache hasil fetch supaya hemat request (patuh fair-use PokeAPI).
   const cache = new Map();
 
@@ -344,34 +360,69 @@
     el.err.textContent = msg;
   }
 
+  // Bangun badge tipe (misal: grass / poison) dengan warna resminya.
+  function buildTypes(types) {
+    el.types.innerHTML = "";
+    types.forEach(t => {
+      const badge = document.createElement("span");
+      badge.className = "type-badge";
+      badge.textContent = t;
+      badge.style.background = TYPE_COLORS[t] || "#666";
+      el.types.appendChild(badge);
+    });
+  }
+
+  // Bangun 6 baris bar stat dasar (HP, ATK, DEF, SpA, SpD, SPD).
+  function buildStats(stats) {
+    el.statsPanel.innerHTML = "";
+    stats.forEach(s => {
+      const row = document.createElement("div");
+      row.className = "stat-row";
+      const persen = Math.min(100, (s.value / STAT_MAX) * 100);
+      row.innerHTML =
+        '<span class="s-lbl">' + (STAT_LABELS[s.name] || s.name) + "</span>" +
+        '<span class="s-val">' + s.value + "</span>" +
+        '<span class="stat-bar"><span style="width:' + persen + '%"></span></span>';
+      el.statsPanel.appendChild(row);
+    });
+  }
+
+  // Gambar mana yang dipakai: shiny kalau lagi hoki, kalau tidak yang biasa.
+  function artOf(result) {
+    return result.shiny && result.shinyArtwork ? result.shinyArtwork : result.artwork;
+  }
+
   // ---------- Render kartu Pokémon ----------
-  // (Bagian 3 nanti menambah badge tipe, bar stat, dan efek shiny.)
   function render(result) {
     el.placeholder.style.display = "none";
     el.sprite.style.display = "block";
-    el.sprite.src = result.artwork;
+    el.sprite.src = artOf(result);
     el.sprite.alt = result.name;
+    el.shinyBadge.style.display = result.shiny ? "block" : "none";
 
     el.pokeName.textContent = result.name;
     el.dexNum.textContent = "#" + String(result.id).padStart(3, "0");
 
-    el.rarity.textContent = result.kelas;
+    buildTypes(result.types);
+    buildStats(result.stats);
+
+    el.rarity.textContent = result.kelas + (result.shiny ? " ✨ shiny" : "");
     el.rarity.className = "rar " + result.kelas;
 
     // Trik reset animasi: hapus kelas, paksa reflow, pasang lagi.
     el.card.className = "card";
     void el.card.offsetWidth;
-    el.card.className = "card " + result.kelas + " reveal";
+    el.card.className = "card " + result.kelas + " reveal" + (result.shiny ? " shiny" : "");
   }
 
   function addHistory(result) {
     const chip = document.createElement("div");
-    chip.className = "chip " + result.kelas;
+    chip.className = "chip " + result.kelas + (result.shiny ? " shiny" : "");
     const img = document.createElement("img");
-    img.src = result.artwork;
+    img.src = artOf(result);
     img.alt = result.name;
     chip.appendChild(img);
-    chip.title = result.name;
+    chip.title = result.name + " (" + result.kelas + (result.shiny ? ", shiny" : "") + ")";
     el.history.prepend(chip);
     while (el.history.children.length > 12) {
       el.history.removeChild(el.history.lastChild);
@@ -384,7 +435,8 @@
     const id = pickId(kelas);
     try {
       const mon = await getPokemon(id);
-      const result = { ...mon, kelas };
+      const shiny = Math.random() < SHINY_RATE && !!mon.shinyArtwork;
+      const result = { ...mon, kelas, shiny };
       commitCounters(kelas); // hanya dihitung kalau fetch sukses
       updateStats();
       render(result);
